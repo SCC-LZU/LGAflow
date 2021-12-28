@@ -1,0 +1,7 @@
+name: pasa
+channels:
+  - bioconda
+  - conda-forge
+dependencies:
+  - pasa
+  - minimap2

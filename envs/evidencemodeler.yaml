@@ -1,0 +1,5 @@
+name: evidencemodeler
+channels:
+  - bioconda
+dependencies:
+  - evidencemodeler=1.1.1

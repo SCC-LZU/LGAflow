@@ -1,0 +1,8 @@
+name: repeat_annotation
+channels:
+  - bioconda
+  - conda-forge
+
+dependencies:
+  - repeatmasker
+  - repeatmodeler
