@@ -1,0 +1,7 @@
+Bootstrap: library
+from: alpine:latest
+
+%post
+    wget http://app.shenwei.me/data/seqkit/seqkit_linux_amd64.tar.gz && \
+    tar -xvf seqkit_linux_amd64.tar.gz && \
+    cp seqkit /usr/local/bin/
