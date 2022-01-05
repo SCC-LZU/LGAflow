@@ -1,7 +1,7 @@
-name: samtools.yaml
+name: samtools
 channels:
   - bioconda
   - conda-forge
 
 dependencies:
-  - samtools.yaml
+  - samtools

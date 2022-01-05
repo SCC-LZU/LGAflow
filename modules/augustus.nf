@@ -1,7 +1,6 @@
 
 process augustus { 
     label 'augustus'
-    maxForks params.cores-1
 
     input:
     path(fasta)
@@ -18,7 +17,7 @@ process augustus {
 }
 
 process split_for_augustus {
-    label 'smalljob'
+    label 'augustus'
 
     input:
     path(fasta)
@@ -49,7 +48,7 @@ process copy_busco_model {
 }
 
 process merge_result_augustus {
-    label 'smalljob'
+    label 'augustus'
     publishDir "${params.output}/${params.augustus_dir}", pattern: "*", mode: "copy"
 
     input:
@@ -65,7 +64,7 @@ process merge_result_augustus {
 }
 
 process convert_format_augustus {
-    label 'smalljob'
+    label 'augustus'
     publishDir "${params.output}/${params.augustus_dir}", pattern: "*", mode: "copy"
 
     input:
