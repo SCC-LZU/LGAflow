@@ -1,6 +1,5 @@
 process exonerate {
     label 'exonerate'
-    maxForks params.cores
 
     input:
     each path(fasta)
@@ -16,7 +15,7 @@ process exonerate {
 }
 
 process split_for_exonerate{
-    label 'smalljob'
+    label 'exonerate'
 
     input:
     path(fasta)
@@ -33,7 +32,7 @@ process split_for_exonerate{
 }
 
 process merge_result_exonerate {
-    label 'smalljob'
+    label 'exonerate'
     publishDir "${params.output}/${params.exonerate_dir}", pattern: "*", mode: "copy"
 
     input:
@@ -49,7 +48,7 @@ process merge_result_exonerate {
 }
 
 process convert_format_exonerate {
-    label 'smalljob'
+    label 'exonerate'
     publishDir "${params.output}/${params.exonerate_dir}", pattern: "*",  mode: "copy"
 
     input:

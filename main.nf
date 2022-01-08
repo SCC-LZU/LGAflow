@@ -6,11 +6,12 @@ nextflow.enable.dsl=2
 
 genome_file = Channel.fromPath( params.genome, checkIfExists: true)
 reads_file = Channel.fromPath( params.reads+'/*.fq.gz', checkIfExists: true)
+proteins_ch = Channel.fromPath(params.proteins+'/*.fa',checkIfExists: true)
+univec_file = Channel.fromPath( params.univec, checkIfExists: true)
 species_ch = Channel.value( params.species )
 busco_db_ch = Channel.value( params.busco_db )
 weights_ch = Channel.fromPath( params.evm_weights, checkIfExists: true)
 pasa_config_ch = Channel.fromPath( params.pasa_config, checkIfExists: true)
-proteins_ch = Channel.fromPath(params.proteins+'/*.fa',checkIfExists: true )
 repeatmasker_speices_ch = Channel.value( params.rm_species )
 repeatmodeler_dbname_ch = Channel.value( params.rmdb_name )
 search_engine = Channel.value( params.rm_search_engine)
@@ -149,7 +150,7 @@ workflow transcriptome_pred {
         assembly_denovo=trinity_de_novo_assembly(reads_trimmed)
         assemblies=pasa_concat(assembly_gg,assembly_denovo)
         tdn = pasa_create_tdn(assembly_gg)
-        pasa_seq_clean(assemblies)
+        pasa_seq_clean(assemblies,univec_file)
         assemblies_clean = pasa_seq_clean.out.clean
         assemblies_cln = pasa_seq_clean.out.cln
         pasa(pasa_config,masked_genome,assemblies,assemblies_clean,assemblies_cln,tdn)

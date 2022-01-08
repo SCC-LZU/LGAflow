@@ -3,21 +3,14 @@ process pasa_seq_clean {
 
     input:
     path(transcripts)
-    //path(univec)
+    path(univec)
 
     output:
     path "*.fasta.cln", emit: cln
     path "*.fasta.clean", emit: clean
     script:
-    /*
-    if (univec) {
-        vector_sequences_option = "-v ${univec}"
-    } else {
-        vector_sequences_option = ''
-    }
-    */
     """
-    \$PASAHOME/bin/seqclean ${transcripts}
+    \$PASAHOME/bin/seqclean ${transcripts} -v ${univec}
     """
 
 }
@@ -71,10 +64,13 @@ process pasa {
     path '*.pasa_assemblies.gff3',emit: assemble_gff
 
     script:
+    if (docker.enable) {
+        params.pasa_additional_params = '--ALIGNERS blat,minimap2 -I 600000'
+    }
     
     """
     rm -f /tmp/mydb.sqlite
-    \$PASAHOME/Launch_PASA_pipeline.pl -c ${config} -C -R -g ${ref_genome_masked} -T -u ${transcript} -t ${transcript_clean} --CPU ${task.cpus} --TRANSDECODER ${params.pasa_additional_options}
+    \$PASAHOME/Launch_PASA_pipeline.pl -c ${config} -C -R -g ${ref_genome_masked} -T -u ${transcript} -t ${transcript_clean} --CPU ${task.cpus} --TDN ${tdn} ${params.pasa_additional_params}
     """
     
 }
