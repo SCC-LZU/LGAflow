@@ -14,7 +14,7 @@ process exonerate {
     """
 }
 
-process split_for_exonerate{
+process exonerate_partition{
     label 'exonerate'
 
     input:

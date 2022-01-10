@@ -10,8 +10,8 @@ DATABASE=<__DATABASE__>
 # assign a value as done above.
 
 #script validate_alignments_in_db.dbi
-validate_alignments_in_db.dbi:--MIN_PERCENT_ALIGNED=<__MIN_PERCENT_ALIGNED__>
-validate_alignments_in_db.dbi:--MIN_AVG_PER_ID=<__MIN_AVG_PER_ID__>
+validate_alignments_in_db.dbi:--MIN_PERCENT_ALIGNED=80
+validate_alignments_in_db.dbi:--MIN_AVG_PER_ID=80
 
 #script subcluster_builder.dbi
 subcluster_builder.dbi:-m=50

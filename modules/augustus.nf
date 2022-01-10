@@ -16,7 +16,7 @@ process augustus {
 
 }
 
-process split_for_augustus {
+process augustus_partition {
     label 'augustus'
 
     input:

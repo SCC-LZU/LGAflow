@@ -1,5 +1,6 @@
 process run_evm{
     label 'evm'
+    cpus 1
 
     input:
     path(command)
@@ -7,11 +8,10 @@ process run_evm{
     output:
     path 'evm*.log'
 
-    // The outputs doesn't do nothing here, EVM combines the chunks based on the original partition file
-    // only for workflow control
     shell:
     '''
-    $EVM_HOME/EvmUtils/execute_EVM_commands.pl !{command} | tee evm!{command.baseName}.log
+    RUN_ID=$(pwd | awk -F/ '{print $NF}')
+    $EVM_HOME/EvmUtils/execute_EVM_commands.pl !{command} | tee evm_$(RUN_ID).log
     '''
 }
 
@@ -30,24 +30,17 @@ process evm_partition {
 
     output:
     path 'partitions_list.out',emit:partition_list
-    path 'commands.list', emit:commands_list
+    path 'commands_list.out', emit:commands_list
 
     script:
-    //gene_predictions = ""
-    transcript_alignments = ""
-    //protein_alignments = ""
-    //if(de_novo_gff) {
-        gene_predictions = "--gene_predictions ${de_novo_gff}"
-    //}
-    //if(transcript_gff) {
-        //transcript_alignments = "--transcript_alignments ${transcript_gff}"
-    //}
-    //if(protein_gff) {
-        protein_alignments = " --protein_alignments ${protein_gff}"
-    //}
+
+    gene_predictions = "--gene_predictions ${de_novo_gff}"
+    transcript_alignments = "--transcript_alignments ${transcript_gff}"
+    protein_alignments = " --protein_alignments ${protein_gff}"
+
     """
     \$EVM_HOME/EvmUtils/partition_EVM_inputs.pl --genome ${genome_file} ${gene_predictions} ${transcript_alignments} ${protein_alignments} --segmentSize ${segment_size} --overlapSize ${overlap_size} --partition_listing partitions_list.out
-    \$EVM_HOME/EvmUtils/write_EVM_commands.pl --genome ${genome_file} ${gene_predictions} ${transcript_alignments} ${protein_alignments}  --weights `pwd`/${weights} --partitions partitions_list.out --output_file_name evm.out > commands.list
+    \$EVM_HOME/EvmUtils/write_EVM_commands.pl --genome ${genome_file} ${gene_predictions} ${transcript_alignments} ${protein_alignments}  --weights `pwd`/${weights} --partitions partitions_list.out --output_file_name evm.out > commands_list.out
     """
 
 }
@@ -69,21 +62,21 @@ process evm_merge_result {
 }
 
 process evm_convert_to_gff {
-        label 'smalljob'
-        publishDir "${OUTDIR}/annotation/evm", mode: 'copy'
+    label 'smalljob'
+    publishDir "${OUTDIR}/annotation/evm", mode: 'copy'
 
-        input:
-        path(partitions)
-        path(merge_evm_gff_script)
+    input:
+    path(partitions)
+    path(merge_evm_gff_script)
 
-        output:
-        path(evm_gff)
+    output:
+    path(evm_gff)
 
-        script:
-        evm_gff = "annotations.evm.gff"
-        """
-        perl ${merge_evm_gff_script} --partitions ${partitions} --gff $evm_gff
-        """
+    script:
+    evm_gff = "annotations.evm.gff"
+    """
+    perl ${merge_evm_gff_script} --partitions ${partitions} --gff $evm_gff
+    """
 
 }
 
@@ -101,7 +94,6 @@ process augustus_to_evm {
     script:
     
     """
-    cpan URI::Escape
     \$EVM_HOME/EvmUtils/misc/augustus_GTF_to_EVM_GFF3.pl ${augustus_out_gff} > tmp.gff
     awk -f ${relocate_script} tmp.gff > ${augustus_out_gff.simpleName}.fa.augustus_out.convertd.gff
     """

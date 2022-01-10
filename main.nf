@@ -7,26 +7,49 @@ nextflow.enable.dsl=2
 genome_file = Channel.fromPath( params.genome, checkIfExists: true)
 reads_file = Channel.fromPath( params.reads+'/*.fq.gz', checkIfExists: true)
 proteins_ch = Channel.fromPath(params.proteins+'/*.fa',checkIfExists: true)
+
 univec_file = Channel.fromPath( params.univec, checkIfExists: true)
 species_ch = Channel.value( params.species )
 busco_db_ch = Channel.value( params.busco_db )
 weights_ch = Channel.fromPath( params.evm_weights, checkIfExists: true)
-pasa_config_ch = Channel.fromPath( params.pasa_config, checkIfExists: true)
+
+pasa_config_template_ch = Channel.fromPath( workflow.projectDir + '/assets/pasa/pasa.CONFIG.template', checkIfExists: true)
+pasa_align_config_template_ch = Channel.fromPath ( workflow.projectDir + '/assets/pasa/pasa.alignAssembly.Template.txt',checkIfExists: true)
 repeatmasker_speices_ch = Channel.value( params.rm_species )
 repeatmodeler_dbname_ch = Channel.value( params.rmdb_name )
 search_engine = Channel.value( params.rm_search_engine)
+
+
+/*
+scripts
+*/
+exonerate_format_script = Channel.fromPath( workflow.projectDir + '/scripts/convert_format_exonerate.pl', checkIfExists: true)
+splite_script = Channel.fromPath( workflow.projectDir + '/scripts/split_genome.pl', checkIfExists: true)
+//merge_evm_gff_script = Channel.fromPath( workflow.projectDir + '/scripts/merge_evm_gff.pl', checkIfExists: true)
+relocate_script = Channel.fromPath( workflow.projectDir + '/scripts/relocate_augustus.awk', checkIfExists: true)
+
+
+/*
+initialize
+*/
 
 //get file name
 fileName = file( params.genome ).simpleName
 genome_name = Channel.value( fileName )
 
+//check if output_dir already exists
+// result_dir = file(params.output,type: 'dir')
+// dir_exists = result_dir.exists()
+// if (dir_exists){
+//     exists = dir_exists
+//     count = 0
+//     while (exists) {
+//         count++
+//         exists = file("${params.output}_${count}",type: 'dir').exists()
+//     }
+//     result_dir.renameTo("${params.output}_${count}")
+// }
 
-//scripts
-//augustus_format_script = Channel.fromPath( workflow.projectDir + '/scripts/convert_format_augustus.pl', checkIfExists: true)
-exonerate_format_script = Channel.fromPath( workflow.projectDir + '/scripts/convert_format_exonerate.pl', checkIfExists: true)
-splite_script = Channel.fromPath( workflow.projectDir + '/scripts/split_genome.pl', checkIfExists: true)
-//merge_evm_gff_script = Channel.fromPath( workflow.projectDir + '/scripts/merge_evm_gff.pl', checkIfExists: true)
-relocate_script = Channel.fromPath( workflow.projectDir + '/scripts/relocate_augustus.awk', checkIfExists: true)
 
 /*
 * modules
@@ -35,11 +58,13 @@ relocate_script = Channel.fromPath( workflow.projectDir + '/scripts/relocate_aug
 include {seqkit_length_filter ;seqkit_to_uppercase; seqkit_to_singleline; seqkit_sliding_trimming} from './modules/seqkit.nf'
 include {busco} from './modules/busco.nf'
 include {fastp} from './modules/fastp.nf'
+include {cdhit} from './modules/cdhit.nf'
 
 workflow preprocess {
     take:
         genome_raw
         reads_raw
+        proteins
     main:
         seqkit_to_uppercase(genome_raw)
         seqkit_length_filter(seqkit_to_uppercase.out)
@@ -48,9 +73,21 @@ workflow preprocess {
         fastp(genome_name ,reads_raw.toSortedList())
         reads_trimmed = fastp.out.sample_trimmed
 
+        num_of_proteins = 0
+        proteins.count().subscribe{
+            num_of_proteins = it
+        }
+        if ( num_of_proteins > 1){
+            cdhit(proteins)
+            merged_protein = cdhit.out
+        }else {
+            merged_protein = proteins
+        }
+
     emit:
         genome_preprocessed
         reads_trimmed
+        merged_protein
 }
 
 include {repeatmasker; build_database; repeatmodeler} from './modules/repeatmasker.nf'
@@ -85,7 +122,7 @@ workflow repeat_annotation {
 
 }
 
-include { augustus; convert_format_augustus; split_for_augustus; copy_busco_model; merge_result_augustus } from './modules/augustus.nf'
+include { augustus; convert_format_augustus; augustus_partition; copy_busco_model; merge_result_augustus } from './modules/augustus.nf'
 include { augustus_to_evm } from './modules/evidencemodeler.nf'
 
 workflow de_novo {
@@ -95,7 +132,7 @@ workflow de_novo {
         species
     main:
         seqkit_sliding_trimming(genome_file)
-        splited_genomes = split_for_augustus(seqkit_sliding_trimming.out,splite_script)
+        splited_genomes = augustus_partition(seqkit_sliding_trimming.out,splite_script)
         //get or train busco model
         if (params.augustus_config){
             augustus_config_ch = Channel.fromPath(params.augustus_config,checkIfExists: true, type: 'dir')
@@ -115,14 +152,14 @@ workflow de_novo {
 
 }
 
-include { exonerate; split_for_exonerate; merge_result_exonerate; convert_format_exonerate } from './modules/exonerate.nf'
+include { exonerate; exonerate_partition; merge_result_exonerate; convert_format_exonerate } from './modules/exonerate.nf'
 workflow homology_pred {
     take:
         genome_file_ch
         uniprot_ch
     main:
         seqkit_sliding_trimming(genome_file_ch)
-        splited_genome = split_for_exonerate(seqkit_sliding_trimming.out,splite_script)
+        splited_genome = exonerate_partition(seqkit_sliding_trimming.out,splite_script)
         exonerate_out = exonerate(splited_genome.flatten(),uniprot_ch)
         result = merge_result_exonerate(exonerate_out.collect(),genome_name)
         converted_annotation = convert_format_exonerate(exonerate_format_script,relocate_script,result)
@@ -134,14 +171,13 @@ workflow homology_pred {
 
 include { hisat2index; hisat2 } from './modules/hisat2.nf'
 include { trinity_de_novo_assembly; tririty_genome_guided_assembly } from './modules/trinity.nf'
-include { pasa ;pasa_concat; pasa_create_tdn; pasa_seq_clean } from './modules/pasa.nf'
+include { pasa ;pasa_concat; pasa_create_tdn; pasa_seq_clean; pasa_mysql_config; pasa_sqlite_config } from './modules/pasa.nf'
 workflow transcriptome_pred {
 
     take:
         ref_genome
         masked_genome
         reads_trimmed
-        pasa_config
     main:
         index = hisat2index(ref_genome)
         hisat2(genome_name,reads_trimmed,ref_genome,index)
@@ -153,11 +189,40 @@ workflow transcriptome_pred {
         pasa_seq_clean(assemblies,univec_file)
         assemblies_clean = pasa_seq_clean.out.clean
         assemblies_cln = pasa_seq_clean.out.cln
-        pasa(pasa_config,masked_genome,assemblies,assemblies_clean,assemblies_cln,tdn)
-        trans_gff =pasa.out.trans_gff 
+        if ( params.pasa_config != '' && params.pasa_align_config != '' ){
+            pasa_config = Channel.fromPath( params.pasa_config, checkIfExists: true)
+            pasa_align_config = Channel.fromPath (params.pasa_align_config,checkIfExists: true)
+        }
+        else if ( params.pasa_use_mysql ) {
+            // if (params.pasa_mysql_host==''
+            // ||params.pasa_mysql_dbname==''
+            // ||params.pasa_mysql_username==''
+            // ||pasa_mysql_password=='') {
+            //     println "pasa_mysql_host pasa_mysql_dbname pasa_mysql_username and pasa_mysql_password must be spcified"
+            // }
+
+            pasa_mysql_config(pasa_config_template_ch,
+            pasa_align_config_template_ch,
+            params.pasa_mysql_host,
+            params.pasa_mysql_dbname,
+            params.pasa_mysql_username,
+            params.pasa_mysql_password)
+
+            pasa_config = pasa_mysql_config.out.pasa_conf
+            pasa_align_config = pasa_mysql_config.out.pasa_alignassembly_conf
+        } else {
+            pasa_sqlite_config(pasa_config_template_ch,
+            pasa_align_config_template_ch,
+            params.pasa_sqlite_path)
+            pasa_config = pasa_sqlite_config.out.pasa_conf
+            pasa_align_config = pasa_sqlite_config.out.pasa_alignassembly_conf
+        }
+
+        pasa(pasa_align_config,pasa_config,masked_genome,assemblies,assemblies_clean,assemblies_cln,tdn)
+        assemblies_gff = pasa.out.assemblies_gff 
 
     emit:
-        trans_gff
+        assemblies_gff
 
 }
 
@@ -170,7 +235,7 @@ workflow evidence_modeler {
         transcript_gff_ch
         weights_ch
     main:
-        evm_partition(genome_file_ch, de_novo_gff_ch, proteins_gff_ch, transcript_gff_ch,weights_ch,100000,10000)
+        evm_partition(genome_file_ch, de_novo_gff_ch, proteins_gff_ch, transcript_gff_ch,weights_ch,1000000,100000)
         partition = evm_partition.out.partition_list
         commands = evm_partition.out.commands_list.splitText().flatten()
         run_evm(commands)
@@ -181,10 +246,12 @@ workflow evidence_modeler {
 WORKFLOW ENTRY POINT
 */
 workflow {
-    preprocess(genome_file,reads_file)
+    preprocess(genome_file,reads_file,proteins_ch)
 
     genome_preprocessed = preprocess.out.genome_preprocessed
     reads_trimmed = preprocess.out.reads_trimmed
+    protein_merged = preprocess.out.merged_protein
+
     repeat_annotation(genome_preprocessed,repeatmasker_speices_ch)
 
     genome_file_softmasked = repeat_annotation.out.genome_softmasked
@@ -192,12 +259,12 @@ workflow {
 
     de_novo(genome_file_softmasked, species_ch)
 
-    homology_pred(genome_file_softmasked,proteins_ch)
+    homology_pred(genome_file_softmasked,protein_merged)
 
     de_novo_gff = de_novo.out.converted_annotation
     protein_gff = homology_pred.out.converted_annotation
 
-    trans_gff = transcriptome_pred(genome_preprocessed,genome_file_hardmasked,reads_trimmed,pasa_config_ch)
+    assemblies_gff = transcriptome_pred(genome_preprocessed,genome_file_hardmasked,reads_trimmed)
 
-    evidence_modeler(genome_preprocessed,de_novo_gff,protein_gff,trans_gff,weights_ch)
+    evidence_modeler(genome_preprocessed,de_novo_gff,protein_gff,assemblies_gff,weights_ch)
 }
