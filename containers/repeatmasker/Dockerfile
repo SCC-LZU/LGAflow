@@ -19,11 +19,12 @@ RUN wget http://www.repeatmasker.org/RepeatMasker/RepeatMasker-4.1.2-p1.tar.gz &
     cd /usr/local && \
     tar -xvf RepeatMasker-4.1.2-p1.tar.gz && \
     rm RepeatMasker-4.1.2-p1.tar.gz
-# using latest Dfam
-RUN cd /usr/local/RepeatMasker/Libraries && \
-    wget https://www.dfam.org/releases/current/families/Dfam.h5.gz && \
-    gunzip Dfam.h5.gz && \
-    rm Dfam.h5.gz
+# update Dfam to latest
+# RUN cd /usr/local/RepeatMasker/Libraries && \
+#    wget https://www.dfam.org/releases/current/families/Dfam.h5.gz
+# RUN cd /usr/local/RepeatMasker/Libraries && \
+#    rm -f Dfam.h5 && \
+#    gunzip Dfam.h5.gz 
 # using Repbase
 # COPY ./RepBaseRepeatMaskerEdition-20181026.tar.gz /usr/local/RepeatMasker/
 # RUN cd /usr/local/RepeatMasker && \
@@ -39,7 +40,7 @@ RUN cd /root && \
     cd /root/RECON-1.08/src && \
     make && \
     make install && \
-    sed -i '3c\ $path = /root/RECON-1.08/bin' ../script/recon.pl && \
+    sed -i '3c\ $path = /root/RECON-1.08/bin' /root/RECON-1.08/scripts/recon.pl && \
     mv /root/RECON-1.08 /usr/local/RECON && \
     cd /root && \
     wget http://www.repeatmasker.org/RepeatScout-1.0.6.tar.gz && \
@@ -52,6 +53,6 @@ RUN cd /root && \
     tar -xvf RepeatModeler-2.0.2a.tar.gz && \
     mv RepeatModeler-2.0.2a /usr/local/ && \
     cd /usr/local/RepeatModeler-2.0.2a && \
-    cpan JSON File::Which URI LWP && \
+    cpan JSON File::Which URI LWP
 ENV PATH /usr/local/RepeatModeler-2.0.2a:/usr/local/RepeatMasker:/usr/local/rmblast/bin:$PATH
 
