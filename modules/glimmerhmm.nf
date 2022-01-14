@@ -1,5 +1,5 @@
 process glimmerhmm {
-    label 'glimmer'
+    label 'glimmerhmm'
 
     input:
     path(fasta_hardmasked)
@@ -14,14 +14,18 @@ process glimmerhmm {
     """
 }
 
-process split_for_glimmerhmm {
+process train_glimmerhmm {
+    label 'glimmerhmm'
 
-}
+    input:
+    path(fasta)
+    path(exon)
 
-process merge_result_glimmerhmm {
+    output:
+    
+    script:
 
-}
-
-process convert_format_glimmerhmm {
-
+    """
+    trainGlimmerHMM ${fasta} ${exon} ${params.train_glimmerhmm_additional}
+    """
 }

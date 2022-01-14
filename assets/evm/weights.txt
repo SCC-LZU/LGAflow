@@ -1,3 +1,3 @@
-ABINITIO_PREDICTIO	Augustus			1
-PROTEIN			exonerate:ungapped:protein2dna	1
-TRANSCRIPT		PASA_transcript_assemblies	5
+ABINITIO_PREDICTION Augustus    1
+PROTEIN exonerate:ungapped:protein2dna  1
+TRANSCRIPT  PASA_transcript_assemblies  5

@@ -3,5 +3,4 @@ channels:
   - bioconda
   - conda-forge
 dependencies:
-  - glimmer=3.02
   - glimmerhmm=3.0.4

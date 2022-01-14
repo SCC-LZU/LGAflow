@@ -6,12 +6,12 @@ process run_evm{
     path(command)
 
     output:
-    path 'evm*.log'
+    path 'evm_*.log'
 
     shell:
     '''
     RUN_ID=$(pwd | awk -F/ '{print $NF}')
-    $EVM_HOME/EvmUtils/execute_EVM_commands.pl !{command} | tee evm_$(RUN_ID).log
+    $EVM_HOME/EvmUtils/execute_EVM_commands.pl !{command} > evm_${RUN_ID}.log
     '''
 }
 
@@ -29,14 +29,14 @@ process evm_partition {
     val(overlap_size)
 
     output:
-    path 'partitions_list.out',emit:partition_list
+    path 'partitions_list.out', emit:partition_list
     path 'commands_list.out', emit:commands_list
 
     script:
 
     gene_predictions = "--gene_predictions ${de_novo_gff}"
     transcript_alignments = "--transcript_alignments ${transcript_gff}"
-    protein_alignments = " --protein_alignments ${protein_gff}"
+    protein_alignments = "--protein_alignments ${protein_gff}"
 
     """
     \$EVM_HOME/EvmUtils/partition_EVM_inputs.pl --genome ${genome_file} ${gene_predictions} ${transcript_alignments} ${protein_alignments} --segmentSize ${segment_size} --overlapSize ${overlap_size} --partition_listing partitions_list.out
@@ -57,6 +57,7 @@ process evm_merge_result {
     '''
     $EVM_HOME/EvmUtils/recombine_EVM_partial_outputs.pl --partitions !{partition} --output_file_name evm.out
     $EVM_HOME/EvmUtils/convert_EVM_outputs_to_GFF3.pl  --partitions !{partition} --output evm.out  --genome !{genome_file}
+    find `cat !{workDir}/evm_out -regex ".*evm.out.gff3" -exec cat {}; > EVM.all.gff3
     '''
 
 }

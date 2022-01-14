@@ -1,6 +1,22 @@
 nextflow.enable.dsl=2
 
 /*
+* check params
+*/
+// if (params.help) {
+//     exit 0, help_message()
+// }
+if (params.pasa_use_mysql){
+    if (params.pasa_mysql_host==''
+    ||params.pasa_mysql_dbname==''
+    ||params.pasa_mysql_username==''
+    ||pasa_mysql_password=='') {
+        exit 1,"pasa_mysql_host pasa_mysql_dbname pasa_mysql_username and pasa_mysql_password must be spcified"
+    }
+}
+
+
+/*
 * channels
 */
 
@@ -10,7 +26,7 @@ proteins_ch = Channel.fromPath(params.proteins+'/*.fa',checkIfExists: true)
 
 univec_file = Channel.fromPath( params.univec, checkIfExists: true)
 species_ch = Channel.value( params.species )
-busco_db_ch = Channel.value( params.busco_db )
+busco_dataset_ch = Channel.value( params.busco_dataset )
 weights_ch = Channel.fromPath( params.evm_weights, checkIfExists: true)
 
 pasa_config_template_ch = Channel.fromPath( workflow.projectDir + '/assets/pasa/pasa.CONFIG.template', checkIfExists: true)
@@ -25,7 +41,6 @@ scripts
 */
 exonerate_format_script = Channel.fromPath( workflow.projectDir + '/scripts/convert_format_exonerate.pl', checkIfExists: true)
 splite_script = Channel.fromPath( workflow.projectDir + '/scripts/split_genome.pl', checkIfExists: true)
-//merge_evm_gff_script = Channel.fromPath( workflow.projectDir + '/scripts/merge_evm_gff.pl', checkIfExists: true)
 relocate_script = Channel.fromPath( workflow.projectDir + '/scripts/relocate_augustus.awk', checkIfExists: true)
 
 
@@ -139,8 +154,7 @@ workflow de_novo {
             busco_model = augustus_config_ch
         }
         else {
-            busco_db_dir = busco_db_ch
-            busco_model = busco(genome_raw, species,busco_db_ch,species)
+            busco_model = busco(genome_raw,species,busco_dataset_ch,species)
         }
         copy_busco_model(augustus_config_ch)
         augustus_out = augustus(splited_genomes.flatten(),species)
@@ -194,13 +208,6 @@ workflow transcriptome_pred {
             pasa_align_config = Channel.fromPath (params.pasa_align_config,checkIfExists: true)
         }
         else if ( params.pasa_use_mysql ) {
-            // if (params.pasa_mysql_host==''
-            // ||params.pasa_mysql_dbname==''
-            // ||params.pasa_mysql_username==''
-            // ||pasa_mysql_password=='') {
-            //     println "pasa_mysql_host pasa_mysql_dbname pasa_mysql_username and pasa_mysql_password must be spcified"
-            // }
-
             pasa_mysql_config(pasa_config_template_ch,
             pasa_align_config_template_ch,
             params.pasa_mysql_host,
@@ -235,9 +242,10 @@ workflow evidence_modeler {
         transcript_gff_ch
         weights_ch
     main:
-        evm_partition(genome_file_ch, de_novo_gff_ch, proteins_gff_ch, transcript_gff_ch,weights_ch,1000000,100000)
+        evm_partition(genome_file_ch, de_novo_gff_ch, proteins_gff_ch, 
+        transcript_gff_ch, weights_ch, params.evm_segmentsize, params.evm_overlapsize)
         partition = evm_partition.out.partition_list
-        commands = evm_partition.out.commands_list.splitText().flatten()
+        commands = evm_partition.out.commands_list.splitText(by:params.evm_batchsize,file:true)
         run_evm(commands)
         evm_merge_result(genome_file_ch, partition,run_evm.out.collect())
 

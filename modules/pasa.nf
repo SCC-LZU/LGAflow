@@ -91,7 +91,7 @@ process pasa_create_tdn {
 
 process pasa {
     label 'pasa'
-    publishDir "${params.output}/${params.pasa_dir}", mode: 'copy', pattern: "*.gff3"
+    publishDir "${params.output}/${params.pasa_dir}", mode: 'copy', pattern: "*"
 
     input:
     path(align_config)
@@ -103,19 +103,37 @@ process pasa {
     path(tdn)
 
     output:
-    //path '*.transdecoder.genome.gff3',emit: trans_gff
     path '*.pasa_assemblies.gff3',emit: assemblies_gff
 
     script:
     if ( workflow.containerEngine != null ) {
         params.pasa_additional_params = '--ALIGNERS blat,minimap2 -I 600000'
     }
+    PASACONF = ' '
+    if (params.pasa_use_mysql) {
+        PASACONF = "--PASACONF ${pasa_config}"
+    }
 
     """
     rm -f ${params.pasa_sqlite_path}
-    export PASACONF=${pasa_config}
-    \$PASAHOME/Launch_PASA_pipeline.pl -c ${align_config} -C -R -g ${ref_genome_masked} -T -u ${transcript} -t ${transcript_clean} --CPU ${task.cpus} --TDN ${tdn} ${params.pasa_additional_params}
-    unset PASACONF
+    \$PASAHOME/Launch_PASA_pipeline.pl -c ${align_config} -C -R -g ${ref_genome_masked} -T -u ${transcript} -t ${transcript_clean} --CPU ${task.cpus} --TDN ${tdn} ${PASACONF} ${params.pasa_additional_params} --TRANSDECODER
     """
     
+}
+
+process pasa_assemblies_to_orf {
+    label 'pasa'
+    publishDir "${params.output}/${params.pasa_dir}", mode: 'copy', pattern: "*"
+
+    input:
+    path(transcripts_fasta)
+    path(transcript_gff3)
+
+    output:
+    '*.fasta.transdecoder.genome.bed'
+
+    script:
+    """
+    \$PASAHOME/scripts/pasa_asmbls_to_training_set.dbi  --pasa_transcripts_fasta ${transcripts_fasta} --pasa_transcripts_gff3 ${transcript_gff3}
+    """
 }
