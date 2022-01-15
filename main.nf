@@ -145,6 +145,7 @@ workflow de_novo {
     take:
         genome_file
         species
+        genome_raw
     main:
         seqkit_sliding_trimming(genome_file)
         splited_genomes = augustus_partition(seqkit_sliding_trimming.out,splite_script)
@@ -265,7 +266,7 @@ workflow {
     genome_file_softmasked = repeat_annotation.out.genome_softmasked
     genome_file_hardmasked = repeat_annotation.out.genome_hardmasked
 
-    de_novo(genome_file_softmasked, species_ch)
+    de_novo(genome_file_softmasked, species_ch,genome_file)
 
     homology_pred(genome_file_softmasked,protein_merged)
 
