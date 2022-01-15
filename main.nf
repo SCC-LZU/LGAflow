@@ -22,7 +22,7 @@ if (params.pasa_use_mysql){
 
 genome_file = Channel.fromPath( params.genome, checkIfExists: true)
 reads_file = Channel.fromPath( params.reads+'/*.fq.gz', checkIfExists: true)
-proteins_ch = Channel.fromPath(params.proteins+'/*.fa',checkIfExists: true)
+proteins_ch = Channel.fromPath(params.proteins+'/*.faa',checkIfExists: true)
 
 univec_file = Channel.fromPath( params.univec, checkIfExists: true)
 species_ch = Channel.value( params.species )
