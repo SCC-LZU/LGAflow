@@ -15,18 +15,22 @@ if (params.pasa_use_mysql){
     }
 }
 
+if (params.rm_species==''){
+    params.rm_species= params.species
+}
+
 
 /*
 * channels
 */
 
 genome_file = Channel.fromPath( params.genome, checkIfExists: true)
-reads_file = Channel.fromPath( params.reads+'/*.fq.gz', checkIfExists: true)
-proteins_ch = Channel.fromPath(params.proteins+'/*.faa',checkIfExists: true)
+reads_file = Channel.fromPath( params.reads+'*.fq.gz', checkIfExists: true)
+proteins_ch = Channel.fromPath(params.proteins+'*.fa',checkIfExists: true)
 
 univec_file = Channel.fromPath( params.univec, checkIfExists: true)
 species_ch = Channel.value( params.species )
-busco_dataset_ch = Channel.value( params.busco_dataset )
+busco_db_ch = Channel.fromPath( params.busco_db, checkIfExists: true)
 weights_ch = Channel.fromPath( params.evm_weights, checkIfExists: true)
 
 pasa_config_template_ch = Channel.fromPath( workflow.projectDir + '/assets/pasa/pasa.CONFIG.template', checkIfExists: true)
@@ -71,7 +75,6 @@ genome_name = Channel.value( fileName )
 */
 
 include {seqkit_length_filter ;seqkit_to_uppercase; seqkit_to_singleline; seqkit_sliding_trimming} from './modules/seqkit.nf'
-include {busco} from './modules/busco.nf'
 include {fastp} from './modules/fastp.nf'
 include {cdhit} from './modules/cdhit.nf'
 
@@ -139,6 +142,7 @@ workflow repeat_annotation {
 
 include { augustus; convert_format_augustus; augustus_partition; copy_busco_model; merge_result_augustus } from './modules/augustus.nf'
 include { augustus_to_evm } from './modules/evidencemodeler.nf'
+include {busco} from './modules/busco.nf'
 
 workflow de_novo {
 
@@ -155,9 +159,9 @@ workflow de_novo {
             busco_model = augustus_config_ch
         }
         else {
-            busco_model = busco(genome_raw,species,busco_dataset_ch,species)
+            busco_model = busco(genome_raw,species,busco_db_ch,species)
         }
-        copy_busco_model(augustus_config_ch)
+        copy_busco_model(busco_model)
         augustus_out = augustus(splited_genomes.flatten(),species)
         result = merge_result_augustus(augustus_out.collect(),genome_name)
         converted_annotation = augustus_to_evm(result,relocate_script)
@@ -200,7 +204,7 @@ workflow transcriptome_pred {
         assembly_gg=tririty_genome_guided_assembly(bam,600000)
         assembly_denovo=trinity_de_novo_assembly(reads_trimmed)
         assemblies=pasa_concat(assembly_gg,assembly_denovo)
-        tdn = pasa_create_tdn(assembly_gg)
+        tdn = pasa_create_tdn(assembly_denovo)
         pasa_seq_clean(assemblies,univec_file)
         assemblies_clean = pasa_seq_clean.out.clean
         assemblies_cln = pasa_seq_clean.out.cln
