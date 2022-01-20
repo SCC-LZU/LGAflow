@@ -2,6 +2,7 @@ Bootstrap: library
 from: alpine:latest
 
 %post
+    apk add --upgrade bash
     wget http://app.shenwei.me/data/seqkit/seqkit_linux_amd64.tar.gz && \
     tar -xvf seqkit_linux_amd64.tar.gz && \
     cp seqkit /usr/local/bin/
