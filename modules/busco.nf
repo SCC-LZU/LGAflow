@@ -13,7 +13,13 @@ process busco {
     path "run_${model_name}/augustus_output", emit:busco_model
 
     script:
-    """
-    run_busco -i ${fasta} -o ${model_name} -l ${busco_db} --long -m geno --species ${species} -c ${task.cpus} ${params.busco_additional_params}
-    """
+    if ( workflow.containerEngine != null ) {
+        """
+        conda activate busco && run_busco -i ${fasta} -o ${model_name} -l ${busco_db} --long -m geno --species ${species} -c ${task.cpus} ${params.busco_additional_params}
+        """
+    } else {
+        """
+        run_busco -i ${fasta} -o ${model_name} -l ${busco_db} --long -m geno --species ${species} -c ${task.cpus} ${params.busco_additional_params}
+        """
+    }
 }
