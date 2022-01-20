@@ -15,7 +15,7 @@ process busco {
     script:
     if ( workflow.containerEngine != null ) {
         """
-        conda activate busco && run_busco -i ${fasta} -o ${model_name} -l ${busco_db} --long -m geno --species ${species} -c ${task.cpus} ${params.busco_additional_params}
+        bash -c 'conda activate busco && run_busco -i ${fasta} -o ${model_name} -l ${busco_db} --long -m geno --species ${species} -c ${task.cpus} ${params.busco_additional_params}'
         """
     } else {
         """
