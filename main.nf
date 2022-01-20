@@ -25,8 +25,8 @@ if (params.rm_species==''){
 */
 
 genome_file = Channel.fromPath( params.genome, checkIfExists: true)
-reads_file = Channel.fromPath( params.reads+'*.fq.gz', checkIfExists: true)
-proteins_ch = Channel.fromPath(params.proteins+'*.fa',checkIfExists: true)
+reads_file = Channel.fromPath( params.reads+'*.{fastq,fq}.gz', checkIfExists: true)
+proteins_ch = Channel.fromPath(params.proteins+'*.{fasta,fa,faa}',checkIfExists: true)
 
 univec_file = Channel.fromPath( params.univec, checkIfExists: true)
 species_ch = Channel.value( params.species )
