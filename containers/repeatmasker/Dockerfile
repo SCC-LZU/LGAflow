@@ -11,7 +11,7 @@ RUN wget http://www.repeatmasker.org/rmblast-2.11.0+-x64-linux.tar.gz && \
     mv /usr/local/rmblast-2.11.0 /usr/local/rmblast
 
 # install TRF
-COPY ./trf409.linux64 /root
+COPY ./trf409.linux64 /usr/local/bin
 
 # install repeatmasker
 RUN wget http://www.repeatmasker.org/RepeatMasker/RepeatMasker-4.1.2-p1.tar.gz && \
@@ -19,20 +19,23 @@ RUN wget http://www.repeatmasker.org/RepeatMasker/RepeatMasker-4.1.2-p1.tar.gz &
     cd /usr/local && \
     tar -xvf RepeatMasker-4.1.2-p1.tar.gz && \
     rm RepeatMasker-4.1.2-p1.tar.gz
+
 # update Dfam to latest
 # RUN cd /usr/local/RepeatMasker/Libraries && \
 #    wget https://www.dfam.org/releases/current/families/Dfam.h5.gz
 # RUN cd /usr/local/RepeatMasker/Libraries && \
 #    rm -f Dfam.h5 && \
 #    gunzip Dfam.h5.gz 
+
 # using Repbase
 # COPY ./RepBaseRepeatMaskerEdition-20181026.tar.gz /usr/local/RepeatMasker/
 # RUN cd /usr/local/RepeatMasker && \
 #     gunzip RepBaseRepeatMaskerEdition-20181026.tar.gz && \
 #     tar xvf RepBaseRepeatMaskerEdition-20181026.tar && \
 #     rm RepBaseRepeatMaskerEdition-20181026.tar
+
 RUN cd /usr/local/RepeatMasker && \
-    perl ./configure -libdir /usr/local/RepeatMasker/Libraries/ -rmblast_dir /usr/local/rmblast -trf_prgm /root/trf409.linux64 -default_search_engine rmblast
+    perl ./configure -libdir /usr/local/RepeatMasker/Libraries -rmblast_dir /usr/local/rmblast/bin -trf_prgm /usr/local/bin/trf409.linux64 -default_search_engine rmblast
 # install RepeatModeler
 RUN cd /root && \
     wget http://www.repeatmasker.org/RepeatModeler/RECON-1.08.tar.gz && \
@@ -53,6 +56,6 @@ RUN cd /root && \
     tar -xvf RepeatModeler-2.0.2a.tar.gz && \
     mv RepeatModeler-2.0.2a /usr/local/ && \
     cd /usr/local/RepeatModeler-2.0.2a && \
-    cpan JSON File::Which URI LWP
+    cpan JSON File::Which URI LWP Devel::Size
 ENV PATH /usr/local/RepeatModeler-2.0.2a:/usr/local/RepeatMasker:/usr/local/rmblast/bin:$PATH
 

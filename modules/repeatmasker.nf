@@ -8,7 +8,7 @@ process build_database {
     val(engine)
 
     output:
-    path "consensi.fa.classified", emit: model
+    path "RM_**/consensi.fa.classified", emit: model
 
     script:
     parallel = params.cores/4 
