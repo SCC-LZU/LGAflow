@@ -11,7 +11,7 @@ process busco {
     val(augustus_species)
     
     output:
-    path "run_${model_name}/augustus_output", emit:busco_model
+    path "BUSCO_${species}", emit:busco_model
 
     script:
     if (params.useConda) {
@@ -23,5 +23,7 @@ process busco {
     export AUGUSTUS_CONIF_PATH=${ausgutus_config}
     ${run_busco} -i ${fasta} -o ${sepecies_name} -l ${busco_db} --long -m geno --species ${augustus_species} -c ${task.cpus} ${params.busco_additional_params}
     unset AUGUSTUS_CONIF_PATH
+    mkdir BUSCO_${species}
+    cp run_${model_name}/augustus_output/retraining_parameters/* ./BUSCO_${species}/
     """
 }

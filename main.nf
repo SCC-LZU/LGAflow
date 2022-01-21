@@ -161,12 +161,13 @@ workflow de_novo {
         }
         else {
             augustus_config = create_augustus_config(augustus_config_tarball)
-
-            species_dir = file("${augustus_config}/species/${params.species}", type: 'dir')
-            if (!species_dir.exists) {
-                busco_model = busco(genome_raw,busco_db_ch,augustus_config,species,params.augustus_species)
-                copy_augustus_model(busco_model,augustus_config)
+            if (!params.augustus_train_model) {
+                augustus_model = busco(genome_raw,busco_db_ch,augustus_config,species,params.augustus_species)                
+                speices = "BUSCO_${speices}"
+            } else {
+                augustus_model = Channel.fromPath(params.augustus_train_model,checkIfExists: true, type: 'dir')
             }
+            copy_augustus_model(augustus_model,augustus_config)
         }
         augustus_out = augustus(splited_genomes.flatten(),augustus_config,species)
         result = merge_result_augustus(augustus_out.collect(),genome_name)
