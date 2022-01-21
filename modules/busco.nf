@@ -5,16 +5,23 @@ process busco {
 
     input:
     path(fasta)
-    val(model_name)
     path(busco_db)
-    val(species)
-
+    path(ausgutus_config)
+    val(sepecies_name)
+    val(augustus_species)
+    
     output:
     path "run_${model_name}/augustus_output", emit:busco_model
 
     script:
-
+    if (params.useConda) {
+        run_busco = 'run_busco'
+    } else {
+        run_busco = 'run_BUSCO.py'
+    }
     """
-    busco -i ${fasta} -o ${model_name} -l ${busco_db} --long -m geno --species ${species} -c ${task.cpus} ${params.busco_additional_params}
+    export AUGUSTUS_CONIF_PATH=${ausgutus_config}
+    ${run_busco} -i ${fasta} -o ${sepecies_name} -l ${busco_db} --long -m geno --species ${augustus_species} -c ${task.cpus} ${params.busco_additional_params}
+    unset AUGUSTUS_CONIF_PATH
     """
 }

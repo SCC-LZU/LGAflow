@@ -4,14 +4,17 @@ process augustus {
 
     input:
     path(fasta)
-    val(busco_species)
+    path(config)
+    val(species)
 
     output:
     path "*.gff"
 
     script:
     """
-    augustus --softmasking=1 --species=${busco_species} --UTR=off ${params.augustus_additional_params} ${fasta} > ${fasta.name}.augustus.out.gff
+    export AUGUSTUS_CONIF_PATH=${config}
+    augustus --softmasking=1 --species=${species} --UTR=off ${params.augustus_additional_params} ${fasta} > ${fasta.name}.augustus.out.gff
+    unset AUGUSTUS_CONIF_PATH
     """
 
 }
@@ -34,17 +37,32 @@ process augustus_partition {
 }
 
 
-process copy_busco_model {
+process copy_augustus_model {
     label 'augustus'
     input:
     path(augustus_model)
+    path(augustus_config_path)
 
-    shell:
-    
-    '''
-    cp -r -f -u !{augustus_model} $AUGUSTUS_CONFIG_PATH/species
-    '''
+    script:
+    """
+    cp -r -f -u ${augustus_model} ${augustus_config_path}/species
+    """
 
+}
+
+process create_augustus_config {
+    label 'augustus'
+
+    input:
+    path(config_tarball)
+
+    output:
+    path './config'
+
+    script:
+    """
+    tar -xzvf ${config_tarball}
+    """
 }
 
 process merge_result_augustus {

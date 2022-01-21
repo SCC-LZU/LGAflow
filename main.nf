@@ -15,9 +15,10 @@ if (params.pasa_use_mysql){
     }
 }
 
-if (params.rm_species==''){
+if (params.rm_species==null){
     params.rm_species= params.species
 }
+
 
 
 /*
@@ -30,6 +31,7 @@ proteins_ch = Channel.fromPath(params.proteins+'*.{fasta,fa,faa}',checkIfExists:
 
 univec_file = Channel.fromPath( params.univec, checkIfExists: true)
 species_ch = Channel.value( params.species )
+augustus_config_tarball = Channel.fromPath(params.augustus_config_tarball, checkIfExists: true)
 busco_db_ch = Channel.fromPath( params.busco_db, checkIfExists: true)
 weights_ch = Channel.fromPath( params.evm_weights, checkIfExists: true)
 
@@ -58,7 +60,7 @@ genome_name = Channel.value( fileName )
 
 //check if output_dir already exists
 // result_dir = file(params.output,type: 'dir')
-// dir_exists = result_dir.exists()
+// dir_exists = result_dir.exists
 // if (dir_exists){
 //     exists = dir_exists
 //     count = 0
@@ -123,7 +125,7 @@ workflow repeat_annotation {
             model = repeatmodeler_model_ch
         } 
         else {
-            model = build_database(genome_file,repeatmodeler_dbname_ch,search_engine)
+            model = build_database(genome_file,repeatmodeler_dbname_ch,search_engine).flatten().take(1)
         }
         repeatmasker(genome_file,species,search_engine)
         repeatmodeler(genome_file,model,search_engine)
@@ -140,7 +142,7 @@ workflow repeat_annotation {
 
 }
 
-include { augustus; convert_format_augustus; augustus_partition; copy_busco_model; merge_result_augustus } from './modules/augustus.nf'
+include { augustus; convert_format_augustus; augustus_partition; create_augustus_config;copy_augustus_model; merge_result_augustus } from './modules/augustus.nf'
 include { augustus_to_evm } from './modules/evidencemodeler.nf'
 include {busco} from './modules/busco.nf'
 
@@ -155,14 +157,18 @@ workflow de_novo {
         splited_genomes = augustus_partition(seqkit_sliding_trimming.out,splite_script)
         //get or train busco model
         if (params.augustus_config){
-            augustus_config_ch = Channel.fromPath(params.augustus_config,checkIfExists: true, type: 'dir')
-            busco_model = augustus_config_ch
+            augustus_config = Channel.fromPath(params.augustus_config,checkIfExists: true, type: 'dir')
         }
         else {
-            busco_model = busco(genome_raw,species,busco_db_ch,species)
+            augustus_config = create_augustus_config(augustus_config_tarball)
+
+            species_dir = file("${augustus_config}/species/${params.species}", type: 'dir')
+            if (!species_dir.exists) {
+                busco_model = busco(genome_raw,busco_db_ch,augustus_config,species,params.augustus_species)
+                copy_augustus_model(busco_model,augustus_config)
+            }
         }
-        copy_busco_model(busco_model)
-        augustus_out = augustus(splited_genomes.flatten(),species)
+        augustus_out = augustus(splited_genomes.flatten(),augustus_config,species)
         result = merge_result_augustus(augustus_out.collect(),genome_name)
         converted_annotation = augustus_to_evm(result,relocate_script)
     emit:
