@@ -150,7 +150,6 @@ workflow de_novo {
 
     take:
         genome_file
-        species
         genome_raw
     main:
         seqkit_sliding_trimming(genome_file)
@@ -163,11 +162,12 @@ workflow de_novo {
             augustus_config = create_augustus_config(augustus_config_tarball)
             if (!params.augustus_train_model) {
                 augustus_model = busco(genome_raw,busco_db_ch,augustus_config,species,params.augustus_species)                
-                speices = "BUSCO_${speices}"
+                model_speices = "BUSCO_${params.speices}"
             } else {
                 augustus_model = Channel.fromPath(params.augustus_train_model,checkIfExists: true, type: 'dir')
             }
             copy_augustus_model(augustus_model,augustus_config)
+            model_speices = params.species
         }
         augustus_out = augustus(splited_genomes.flatten(),augustus_config,species)
         result = merge_result_augustus(augustus_out.collect(),genome_name)
@@ -277,7 +277,7 @@ workflow {
     genome_file_softmasked = repeat_annotation.out.genome_softmasked
     genome_file_hardmasked = repeat_annotation.out.genome_hardmasked
 
-    de_novo(genome_file_softmasked, species_ch,genome_file)
+    de_novo(genome_file_softmasked,genome_file)
 
     homology_pred(genome_file_softmasked,protein_merged)
 
