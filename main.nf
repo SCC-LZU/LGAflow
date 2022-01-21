@@ -169,7 +169,7 @@ workflow de_novo {
             copy_augustus_model(augustus_model,augustus_config)
             model_speices = params.species
         }
-        augustus_out = augustus(splited_genomes.flatten(),augustus_config,species)
+        augustus_out = augustus(splited_genomes.flatten(),augustus_config,model_speices)
         result = merge_result_augustus(augustus_out.collect(),genome_name)
         converted_annotation = augustus_to_evm(result,relocate_script)
     emit:
