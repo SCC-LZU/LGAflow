@@ -14,7 +14,9 @@ RUN rm -f Miniconda3-latest-Linux-x86_64.sh
 ENV RSTUDIO_WHICH_R=/usr/local/miniconda3/bin/R \
     AUGUSTUS_SCRIPTS_PATH=/usr/local/miniconda3/bin/ \
     AUGUSTUS_CONFIG_PATH=/usr/local/miniconda3/config/ \
-    AUGUSTUS_BIN_PATH=/usr/local/miniconda3/bin/
+    AUGUSTUS_BIN_PATH=/usr/local/miniconda3/bin/ \
+    CONDA_PYTHON_EXE=/usr/local/miniconda3/bin/python
+
 
 
 
