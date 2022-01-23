@@ -32,7 +32,7 @@ process tririty_genome_guided_assembly {
     """
     MEM=\$(echo ${task.memory} | awk '{print \$1}')
     Trinity --genome_guided_bam ${genome_bam} --genome_guided_max_intron ${max_intron} --CPU ${task.cpus} --max_memory \${MEM}G
-    cp trinity_out_dir.Trinity-GG.fasta trinity-gg.fasta
+    cp trinity_out_dir/Trinity-GG.fasta trinity-gg.fasta
     """
 
 }

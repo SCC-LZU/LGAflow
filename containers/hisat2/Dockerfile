@@ -12,6 +12,6 @@ RUN apt install -y libncurses5-dev zlib1g-dev libbz2-dev liblzma-dev
 RUN wget https://download.fastgit.org/samtools/samtools/releases/download/1.14/samtools-1.14.tar.bz2 && \
     tar -xjf samtools-1.14.tar.bz2 && \
     cd samtools-1.14 && \
-    ./configure --prefix /usr/local/bin && \
+    ./configure --prefix /usr/local && \
     make -j$(nproc) && \
     make install
