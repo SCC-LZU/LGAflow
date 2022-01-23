@@ -12,7 +12,7 @@ process augustus {
 
     script:
     """
-    export AUGUSTUS_CONIF_PATH=${config}
+    export AUGUSTUS_CONFIG_PATH=${config}
     augustus --softmasking=1 --species=${species} --UTR=off ${params.augustus_additional_params} ${fasta} > ${fasta.name}.augustus.out.gff
     unset AUGUSTUS_CONIF_PATH
     """
