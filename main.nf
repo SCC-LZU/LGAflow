@@ -48,6 +48,7 @@ scripts
 exonerate_format_script = Channel.fromPath( workflow.projectDir + '/scripts/convert_format_exonerate.pl', checkIfExists: true)
 splite_script = Channel.fromPath( workflow.projectDir + '/scripts/split_genome.pl', checkIfExists: true)
 relocate_script = Channel.fromPath( workflow.projectDir + '/scripts/relocate_augustus.awk', checkIfExists: true)
+evm_merge_script = Channel.fromPath( workflow.projectDir + '/scripts/merge_evm_gff.pl', checkIfExists: true)
 
 
 /*
@@ -98,7 +99,7 @@ workflow preprocess {
             num_of_proteins = it
         }
         if ( num_of_proteins > 1){
-            cdhit(proteins)
+            cdhit(proteins.collect())
             merged_protein = cdhit.out
         }else {
             merged_protein = proteins
@@ -142,9 +143,9 @@ workflow repeat_annotation {
 
 }
 
-include { augustus; convert_format_augustus; augustus_partition; create_augustus_config;copy_augustus_model; merge_result_augustus } from './modules/augustus.nf'
+include { augustus; augustus_partition; create_augustus_config;copy_augustus_model; merge_result_augustus } from './modules/augustus.nf'
 include { augustus_to_evm } from './modules/evidencemodeler.nf'
-include {busco} from './modules/busco.nf'
+include {busco; busco_get_model_name} from './modules/busco.nf'
 
 workflow de_novo {
 
@@ -160,14 +161,15 @@ workflow de_novo {
         }
         else {
             augustus_config = create_augustus_config(augustus_config_tarball)
+            model_species = params.species
             if (!params.augustus_train_model) {
-                augustus_model = busco(genome_raw,busco_db_ch,augustus_config,params.species,params.augustus_species)                
-                model_species = "BUSCO_${params.species}"
+                busco(genome_raw,busco_db_ch,augustus_config,params.species,params.augustus_species)
+                augustus_model = busco.out.busco_model
+                model_species = busco_get_model_name(augustus_model)
             } else {
                 augustus_model = Channel.fromPath(params.augustus_train_model,checkIfExists: true, type: 'dir')
             }
             copy_augustus_model(augustus_model,augustus_config)
-            model_species = params.species
         }
         augustus_out = augustus(splited_genomes.flatten(),augustus_config,model_species)
         result = merge_result_augustus(augustus_out.collect(),genome_name)
@@ -197,7 +199,7 @@ workflow homology_pred {
 
 include { hisat2index; hisat2 } from './modules/hisat2.nf'
 include { trinity_de_novo_assembly; tririty_genome_guided_assembly } from './modules/trinity.nf'
-include { pasa ;pasa_concat; pasa_create_tdn; pasa_seq_clean; pasa_mysql_config; pasa_sqlite_config } from './modules/pasa.nf'
+include { pasa ;pasa_concat; pasa_create_tdn; pasa_seq_clean; pasa_mysql_config; pasa_sqlite_config;pasa_assemblies_to_orf } from './modules/pasa.nf'
 workflow transcriptome_pred {
 
     take:
@@ -238,28 +240,34 @@ workflow transcriptome_pred {
         }
 
         pasa(pasa_align_config,pasa_config,masked_genome,assemblies,assemblies_clean,assemblies_cln,tdn)
+
         assemblies_gff = pasa.out.assemblies_gff 
+        assemblies_fasta = pasa.out.assemblies_fasta
+        transdecoder_gff = pasa_assemblies_to_orf(assemblies_fasta,assemblies_gff)
 
     emit:
         assemblies_gff
+        transdecoder_gff
 
 }
 
-include { evm_partition; run_evm; evm_merge_result; evm_convert_to_gff } from './modules/evidencemodeler.nf'
+include { evm_partition; run_evm; evm_convert_and_merge_result; evm_merge_input } from './modules/evidencemodeler.nf'
 workflow evidence_modeler {
     take:
         genome_file_ch
         de_novo_gff_ch
         proteins_gff_ch
         transcript_gff_ch
+        transdecoder_gff
         weights_ch
     main:
-        evm_partition(genome_file_ch, de_novo_gff_ch, proteins_gff_ch, 
+        gene_pred_gff = evm_merge_input(de_novo_gff_ch,transdecoder_gff)
+        evm_partition(genome_file_ch, gene_pred_gff, proteins_gff_ch, 
         transcript_gff_ch, weights_ch, params.evm_segmentsize, params.evm_overlapsize)
         partition = evm_partition.out.partition_list
         commands = evm_partition.out.commands_list.splitText(by:params.evm_batchsize,file:true)
         run_evm(commands)
-        evm_merge_result(genome_file_ch, partition,run_evm.out.collect())
+        evm_convert_and_merge_result(genome_file_ch, partition,run_evm.out.collect(),evm_merge_script)
 
 }
 /*
@@ -284,7 +292,9 @@ workflow {
     de_novo_gff = de_novo.out.converted_annotation
     protein_gff = homology_pred.out.converted_annotation
 
-    assemblies_gff = transcriptome_pred(genome_preprocessed,genome_file_hardmasked,reads_trimmed)
+    transcriptome_pred(genome_preprocessed,genome_file_hardmasked,reads_trimmed)
+    assemblies_gff = transcriptome_pred.out.assemblies_gff
+    transdecoder_gff = transcriptome_pred.out.transdecoder_gff
 
-    evidence_modeler(genome_preprocessed,de_novo_gff,protein_gff,assemblies_gff,weights_ch)
+    evidence_modeler(genome_preprocessed,de_novo_gff,protein_gff,assemblies_gff,transdecoder_gff,weights_ch)
 }

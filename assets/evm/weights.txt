@@ -1,3 +1,4 @@
 ABINITIO_PREDICTION Augustus    1
-PROTEIN exonerate:ungapped:protein2dna  1
-TRANSCRIPT  PASA_transcript_assemblies  5
+PROTEIN exonerate:ungapped:protein2dna  3
+TRANSCRIPT assembler-mydb.sqlite 5
+OTHER_PREDICTION  transdecoder   6

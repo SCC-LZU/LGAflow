@@ -1,6 +1,6 @@
 
 process augustus { 
-    label 'augustus'
+    label 'busco'
 
     input:
     path(fasta)
@@ -12,9 +12,7 @@ process augustus {
 
     script:
     """
-    export AUGUSTUS_CONFIG_PATH=${config}
-    augustus --softmasking=1 --species=${species} --UTR=off ${params.augustus_additional_params} ${fasta} > ${fasta.name}.augustus.out.gff
-    unset AUGUSTUS_CONIF_PATH
+    augustus --softmasking=1 --species=${species} --AUGUSTUS_CONFIG_PATH=${config} --UTR=off ${params.augustus_additional_params} ${fasta} > ${fasta.name}.augustus.out.gff
     """
 
 }
@@ -79,22 +77,4 @@ process merge_result_augustus {
     """
     cat ${gffs} > ${genome_name}.fa.augustus_out.gff
     """
-}
-
-process convert_format_augustus {
-    label 'augustus'
-    publishDir "${params.output}/${params.augustus_dir}", pattern: "*", mode: "copy"
-
-    input:
-    path(convert_format_script)
-    each path(fasta)
-
-    output:
-    path "*.fa.augustus_out.convertd.gff"
-
-    script:
-    """
-    perl ${convert_format_script} ${fasta} ${fasta.simpleName}.fa.augustus_out.convertd.gff
-    """
-
 }

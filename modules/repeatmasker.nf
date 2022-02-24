@@ -71,7 +71,7 @@ process repeatproteinmasker {
 
     input:
     path(genome_file)
-    val(engine)//ncbi(RMBLASTN) by default
+    val(engine)
 
     output:
     path "*.fa.out.gff", emit: mask_gff

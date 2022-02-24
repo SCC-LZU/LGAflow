@@ -104,6 +104,11 @@ process pasa {
 
     output:
     path '*.pasa_assemblies.gff3',emit: assemblies_gff
+    path '*.transdecoder.gff3',emit: transdecoder_gff
+    path '*.transdecoder.cds',emit: transdecoder_cds
+    path '*.transdecoder.bed',emit: transdecoder_bed
+    path '*.assemblies.fasta',emit: assemblies_fasta
+
 
     script:
     if ( workflow.containerEngine != null ) {
@@ -130,7 +135,7 @@ process pasa_assemblies_to_orf {
     path(transcript_gff3)
 
     output:
-    '*.fasta.transdecoder.genome.bed'
+    path '*.fasta.transdecoder.genome.gff3',emit:transdecoder_gff
 
     script:
     """

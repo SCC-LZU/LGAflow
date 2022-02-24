@@ -4,19 +4,6 @@
 use strict;
 use Getopt::Long;
 
-my $usage = {
-perl my_script.pl
-  Getting help:
-    [--help]
-  Input:
-    [--partitions filename]
-		The name of the file to read. 
-  Ouput:    
-    [--gff filename]
-        The name of the output file. By default the output is the
-        standard output
-};
-
 my $gff = undef;
 my $partitions = undef;
 my $help;
@@ -28,7 +15,6 @@ GetOptions(
 
 # Print Help and exit
 if ($help) {
-    print $usage;
     exit(0);
 }
 

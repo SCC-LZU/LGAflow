@@ -6,11 +6,11 @@ process exonerate {
     path(uniprot_fasta)
 
     output:
-    path '*.fa.exonerate_out.gff'
+    path '*.exonerate_out.gff'
 
     script:
     """
-    exonerate -q ${uniprot_fasta} -Q protein --softmaskquery no -t ${fasta} -T dna --softmasktarget yes --showquerygff no --showtargetgff yes --ryo 'AveragePercentIdentity: %pi\n' --showvulgar no --showalignment no ${params.exonerate_additional_params} | tee ${fasta.simpleName}.fa.exonerate_out.gff
+    exonerate -q ${uniprot_fasta} -Q protein --softmaskquery no -t ${fasta} -T dna --softmasktarget yes --showquerygff no --showtargetgff yes --ryo 'AveragePercentIdentity: %pi\n' --showvulgar no --showalignment no ${params.exonerate_additional_params} | tee ${fasta.simpleName}.${uniprot_fasta.simpleName}.exonerate_out.gff
     """
 }
 
@@ -32,7 +32,7 @@ process exonerate_partition{
 }
 
 process merge_result_exonerate {
-    label 'exonerate'
+    label 'smalljobs'
     publishDir "${params.output}/${params.exonerate_dir}", pattern: "*", mode: "copy"
 
     input:
@@ -57,10 +57,10 @@ process convert_format_exonerate {
     each path(fasta)
 
     output:
-    path "*.fa.exonerate_out.convertd.gff"
+    path "*.exonerate_out.convertd.gff"
 
     shell:
     '''
-    perl !{convert_format_script} !{fasta} | awk \'BEGIN{i=0};{if($0~/alignment_id 1\\s/){i++};print $1"\\t"$2"\\t"$3"\\t"$4"\\t"$5"\\t"$6"\\t"$7"\\t"$8"\\t" "ID=match_NO_" i ";AveragePercentIdentity="$19 }\' | grep -v "line" | awk -f !{relocate_script} > !{fasta.simpleName}.fa.exonerate_out.convertd.gff
+    perl !{convert_format_script} !{fasta} | awk \'BEGIN{i=0};{if($0~/alignment_id 1\\s/){i++};print $1"\\t"$2"\\t"$3"\\t"$4"\\t"$5"\\t"$6"\\t"$7"\\t"$8"\\t" "ID=match_NO_" i ";AveragePercentIdentity="$19 }\' | grep -v "line" | awk -f !{relocate_script} > !{fasta.simpleName}.exonerate_out.convertd.gff
     '''
 }
