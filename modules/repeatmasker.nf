@@ -1,5 +1,5 @@
 process build_database {
-    label 'repeat'
+    label 'repeatmodeler'
     publishDir "${params.output}/${params.repeatmodeler_dir}", mode: 'copy', pattern: "*"
 
     input:
@@ -19,7 +19,7 @@ process build_database {
 }
 
 process repeatmasker {
-    label 'repeat'
+    label 'repeatmasker'
 
     publishDir "${params.output}/${params.repeatmasker_dir}", mode: 'copy', pattern: "*"
 
@@ -42,7 +42,7 @@ process repeatmasker {
 }
 
 process repeatmodeler {
-    label 'repeat'
+    label 'repeatmasker'
 
     publishDir "${params.output}/${params.repeatmodeler_dir}", mode: 'copy', pattern: "*"
 
