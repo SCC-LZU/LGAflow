@@ -1,9 +1,8 @@
-name: repeat_annotation
+name: repeatmodeler
 channels:
   - bioconda
   - conda-forge
 
 dependencies:
   - python=2.7
-  - repeatmasker=4.1.1
   - repeatmodeler=2.0.1
