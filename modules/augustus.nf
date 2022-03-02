@@ -1,6 +1,6 @@
 
 process augustus { 
-    label 'busco'
+    label 'augustus'
 
     input:
     path(fasta)
