@@ -91,24 +91,25 @@ workflow preprocess {
         seqkit_length_filter(seqkit_to_uppercase.out)
         seqkit_to_singleline(seqkit_length_filter.out)
         genome_preprocessed = seqkit_to_singleline.out
+
         fastp(genome_name ,reads_raw.toSortedList())
         reads_trimmed = fastp.out.sample_trimmed
 
         num_of_proteins = 0
-        proteins.count().subscribe{
+        proteins.toList().count().subscribe{
             num_of_proteins = it
         }
-        if ( num_of_proteins > 1){
+        if ( num_of_proteins > 1 && !params.skip_cdhit){
             cdhit(proteins.collect())
-            merged_protein = cdhit.out
-        }else {
-            merged_protein = proteins
+            protein_merged = cdhit.out
+        } else {
+            protein_merged = proteins
         }
 
     emit:
         genome_preprocessed
         reads_trimmed
-        merged_protein
+        protein_merged
 }
 
 include {repeatmasker; build_database; repeatmodeler} from './modules/repeatmasker.nf'
@@ -145,7 +146,8 @@ workflow repeat_annotation {
 
 include { augustus; augustus_partition; create_augustus_config;copy_augustus_model; merge_result_augustus } from './modules/augustus.nf'
 include { augustus_to_evm } from './modules/evidencemodeler.nf'
-include {busco; busco_get_model_name} from './modules/busco.nf'
+include  {busco; busco_get_model_name } from './modules/busco.nf'
+include { train_glimmerhmm; glimmerhmm } from './modules/glimmerhmm.nf'
 
 workflow de_novo {
 
@@ -155,28 +157,39 @@ workflow de_novo {
     main:
         seqkit_sliding_trimming(genome_file)
         splited_genomes = augustus_partition(seqkit_sliding_trimming.out,splite_script)
-        //get or train busco model
+
         if (params.augustus_config){
             augustus_config = Channel.fromPath(params.augustus_config,checkIfExists: true, type: 'dir')
+            model_species = params.augustus_species
         }
         else {
             augustus_config = create_augustus_config(augustus_config_tarball)
-            model_species = params.species
             if (!params.augustus_train_model) {
                 busco(genome_raw,busco_db_ch,augustus_config,params.species,params.augustus_species)
                 augustus_model = busco.out.busco_model
                 model_species = busco_get_model_name(augustus_model)
             } else {
                 augustus_model = Channel.fromPath(params.augustus_train_model,checkIfExists: true, type: 'dir')
+                model_species = file(params.augustus_train_model).getName()
             }
             copy_augustus_model(augustus_model,augustus_config)
         }
+
         augustus_out = augustus(splited_genomes.flatten(),augustus_config,model_species)
-        result = merge_result_augustus(augustus_out.collect(),genome_name)
-        converted_annotation = augustus_to_evm(result,relocate_script)
+        merged_augustus_result = merge_result_augustus(augustus_out.collect(),genome_name)
+        converted_annotation = augustus_to_evm(merged_augustus_result,relocate_script)
+
+        // if (params.use_glimmerhmm) {
+        //     model = train_glimmerhmm(genome_file,exon_file)
+        //     glimmerhmm_result = glimmerhmm(genome,model)
+        //     result = Channel.empty().concat(converted_annotation,glimmerhmm_result)
+        // } else {
+        //     result = converted_annotation
+        // }
+        result = converted_annotation
+
     emit:
         result
-        converted_annotation
 
 }
 
@@ -189,11 +202,11 @@ workflow homology_pred {
         seqkit_sliding_trimming(genome_file_ch)
         splited_genome = exonerate_partition(seqkit_sliding_trimming.out,splite_script)
         exonerate_out = exonerate(splited_genome.flatten(),uniprot_ch)
-        result = merge_result_exonerate(exonerate_out.collect(),genome_name)
-        converted_annotation = convert_format_exonerate(exonerate_format_script,relocate_script,result)
+        merged_exonerate_out = merge_result_exonerate(exonerate_out.collect(),genome_name)
+        converted_annotation = convert_format_exonerate(exonerate_format_script,relocate_script,merged_exonerate_out)
+        result = converted_annotation
     emit:
         result
-        converted_annotation
 
 }
 
@@ -252,7 +265,7 @@ workflow transcriptome_pred {
 }
 
 include { evm_partition; run_evm; evm_convert_and_merge_result; evm_merge_input } from './modules/evidencemodeler.nf'
-workflow evidence_modeler {
+workflow evidence_modeler_annotation {
     take:
         genome_file_ch
         de_novo_gff_ch
@@ -270,31 +283,29 @@ workflow evidence_modeler {
         evm_convert_and_merge_result(genome_file_ch, partition,run_evm.out.collect(),evm_merge_script)
 
 }
+
 /*
 WORKFLOW ENTRY POINT
 */
 workflow {
     preprocess(genome_file,reads_file,proteins_ch)
-
     genome_preprocessed = preprocess.out.genome_preprocessed
     reads_trimmed = preprocess.out.reads_trimmed
-    protein_merged = preprocess.out.merged_protein
+    protein_merged = preprocess.out.protein_merged
 
     repeat_annotation(genome_preprocessed,repeatmasker_speices_ch)
-
     genome_file_softmasked = repeat_annotation.out.genome_softmasked
     genome_file_hardmasked = repeat_annotation.out.genome_hardmasked
 
     de_novo(genome_file_softmasked,genome_file)
-
+    de_novo_gff = de_novo.out.result
+    
     homology_pred(genome_file_softmasked,protein_merged)
-
-    de_novo_gff = de_novo.out.converted_annotation
-    protein_gff = homology_pred.out.converted_annotation
+    protein_gff = homology_pred.out.result
 
     transcriptome_pred(genome_preprocessed,genome_file_hardmasked,reads_trimmed)
     assemblies_gff = transcriptome_pred.out.assemblies_gff
     transdecoder_gff = transcriptome_pred.out.transdecoder_gff
 
-    evidence_modeler(genome_preprocessed,de_novo_gff,protein_gff,assemblies_gff,transdecoder_gff,weights_ch)
+    evidence_modeler_annotation(genome_preprocessed,de_novo_gff,protein_gff,assemblies_gff,transdecoder_gff,weights_ch)
 }

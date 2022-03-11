@@ -4,11 +4,12 @@ process samtools_sam_to_bam {
     input:
     path(sam)
 
-    output
-    path "${sam.baseName}"
+    output:
+    path "${sam.baseName}.bam"
 
     script:
     """
-    samtools view -@ ${task.cpus} -b -S ${sam} -o ${sam.basseName}.bam
+    samtools view -@ ${task.cpus} -b -S ${sam} -o ${sam.baseName}.bam
     """
 }
+

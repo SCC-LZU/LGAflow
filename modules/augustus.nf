@@ -3,7 +3,7 @@ process augustus {
     label 'augustus'
 
     input:
-    path(fasta)
+    each path(fasta)
     path(config)
     val(species)
 
@@ -36,7 +36,7 @@ process augustus_partition {
 
 
 process copy_augustus_model {
-    label 'augustus'
+    label 'smalljobs'
     input:
     path(augustus_model)
     path(augustus_config_path)
@@ -49,7 +49,7 @@ process copy_augustus_model {
 }
 
 process create_augustus_config {
-    label 'augustus'
+    label 'smalljobs'
 
     input:
     path(config_tarball)
@@ -64,7 +64,7 @@ process create_augustus_config {
 }
 
 process merge_result_augustus {
-    label 'augustus'
+    label 'smalljobs'
     publishDir "${params.output}/${params.augustus_dir}", pattern: "*", mode: "copy"
 
     input:

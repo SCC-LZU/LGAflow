@@ -21,7 +21,8 @@ process busco {
     }
     """
     export AUGUSTUS_CONFIG_PATH=${ausgutus_config} && \
-    ${run_busco} -i ${fasta} -o ${sepecies_name} -l ${busco_db} --long -m geno --species ${augustus_species} -c ${task.cpus} ${params.busco_additional_params} && \
+    ${run_busco} -i ${fasta} -o ${sepecies_name} -l ${busco_db} --long -m geno --species ${augustus_species} \
+    -c ${task.cpus} ${params.busco_additional_params} && \
     unset AUGUSTUS_CONIF_PATH
     MODELNAME=`ls run_c_elegans_trsk/augustus_output/retraining_parameters/ | sed -n 's/_weightmatrix.txt//p'`
     mkdir \$MODELNAME && \
