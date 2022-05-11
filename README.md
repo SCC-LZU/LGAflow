@@ -65,17 +65,12 @@ LGAflow is written in [`Nextflow`](https://github.com/nextflow-io/nextflow?msclk
 ### Install [Miniconda](https://conda.io/projects/conda/en/latest/user-guide/install/index.html)
 
 ### Run Test
-
-``` bash
-# Make sure that the conda-env has been activated
-nextflow run dakehero/lgaflow -profile test,conda,local
-```
-
+Test data can be obtained from http://seafile.itslab.lzu.edu.cn/f/f886da69fd4b4aafad65/
 
 ## Usage
 eg:
 ```
-nextflow run dakehero/lgaflow -profile local,conda --cores 8 --memory 16.GB --genome ./test/c_elegans.fa --proteins ./test/proteins/ --reads ./test/RNA_Seq/ --species caenorhabditis --busco_db ./database/nematoda_odb10/ 
+nextflow run dakehero/lgaflow -profile local,conda --cores 8 --memory 16.GB --genome ./test/c_elegans.fa --proteins ./test/proteins/ --reads ./test/RNA_Seq/ --species c_elegans --rm_species Caenorhabditis --augustus_species caenorhabditis --busco_db ./database/nematoda_odb10/ 
 ```
 
 The above command shows how to perform genome annotation pipeline for *Caenorhabditis elegans* with LGAflow, several options should be specified.
